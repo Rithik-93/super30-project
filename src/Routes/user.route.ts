@@ -42,7 +42,7 @@ router.get('/balance/inr/:userId', (req: Request, res: Response) => {
     };
 });
 
-router.post('/onramp/inr', async (req: Request, res: Response) => {
+router.put('/onramp/inr', async (req: Request, res: Response) => {
     const { userId, amount } = req.body;
     if (!INR_BALANCES[userId]) {
         res.json({

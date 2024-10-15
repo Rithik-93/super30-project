@@ -129,7 +129,7 @@ router.get('/balances/stock', (req: Request, res: Response) => {
     return
 });
 
-router.post('/reset', (req: Request, res: Response) => {
+router.delete('/reset', (req: Request, res: Response) => {
     ORDERBOOK = {};
     STOCK_BALANCES = {};
     INR_BALANCES = {};
@@ -280,7 +280,7 @@ router.get('/orderbook/:stockSymbol', (req: Request, res: Response) => {
     })
 })
 
-router.post('/trade/mint', (req: Request, res: Response) => {
+router.put('/trade/mint', (req: Request, res: Response) => {
     const { stockSymbol, userId, quantity } = req.body;
 
     if (!INR_BALANCES[userId]) {
