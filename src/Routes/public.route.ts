@@ -159,7 +159,7 @@ router.post('/order/buy', async (req: Request, res: Response) => {
             msg: `${stockSymbol} unavailable in the Orderbook`
         })
         return
-    }
+    };
     // const userStockType = ORDERBOOK[stockSymbol][userId]
     if (stocktype === "no") {
         if (!ORDERBOOK[stockSymbol].no[price.toString()] || ORDERBOOK[stockSymbol].no[price.toString()].total < quantity) {
@@ -184,12 +184,11 @@ router.post('/order/buy', async (req: Request, res: Response) => {
 
     }
 
-    if (!(stocktype === "yes" || "no")) {
-        res.json({
-            msg: "Please enter a valid stock type"
-        });
-        return
+    if (stocktype !== "yes" && stocktype !== "no") {
+        res.json({ msg: "Please enter a valid stock type" });
+        return;
     }
+    
     INR_BALANCES[userId].balance -= totalCost;
     INR_BALANCES[userId].locked += totalCost;
     if (!STOCK_BALANCES[userId]) {
