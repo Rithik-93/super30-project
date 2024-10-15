@@ -1,6 +1,6 @@
 
 
-interface INR_BALANCESType {
+export interface INR_BALANCESType {
     [key: string]: 
     { 
         balance: number, 
@@ -8,7 +8,7 @@ interface INR_BALANCESType {
     }
 }
 
-interface ORDERBOOKType {
+export interface ORDERBOOKType {
     [currencyPair: string]: {
         yes: {
             [price: string]: {
@@ -29,7 +29,7 @@ interface ORDERBOOKType {
     };
 }
 
-interface STOCK_BALANCESType {
+export interface STOCK_BALANCESType {
     [user: string]: {
         [stockSymbol: string]: {
             yes: {

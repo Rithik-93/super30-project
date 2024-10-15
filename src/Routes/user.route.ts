@@ -17,9 +17,9 @@ router.post('/create/:userId', (req: Request, res: Response) => {
 });
 
 router.get('/stockbalance/:userId', async (req: Request, res: Response) => {
-    const { userId } = req.params;
+    const userId  = req.params.userId;
 
-    if (STOCK_BALANCES[userId]) {
+    if (!STOCK_BALANCES[userId]) {
         res.json({
             msg : "this user doesn't have any stock yet"
         })
