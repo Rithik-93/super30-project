@@ -138,13 +138,25 @@ router.delete('/reset', (req: Request, res: Response) => {
     })
 });
 
-router.post('/order/buy', async (req: Request, res: Response) => {
+interface OrderBuyRequestBody {
+    userId: string;
+    stockSymbol: string;
+    quantity: number;
+    price: number;
+    stocktype: "yes" | "no";
+}
+
+router.post('/order/buy', async (req: Request<{}, {}, OrderBuyRequestBody>, res: Response) => {
     const { userId, stockSymbol, quantity, price, stocktype } = req.body;
     const totalCost = quantity * price;
 
     if (!INR_BALANCES[userId]) {
         res.status(400).json({ msg: "User not found" });
         return
+    }
+    if (stocktype !== "no" && stocktype !== "yes") {
+        res.json({ msg: "Please enter a valid stock type" });
+        return;
     }
     if (ORDERBOOK === null) {
         ORDERBOOK = {}
@@ -161,106 +173,96 @@ router.post('/order/buy', async (req: Request, res: Response) => {
         return
     };
     // const userStockType = ORDERBOOK[stockSymbol][userId]
-    if (stocktype === "no") {
-        if (!ORDERBOOK[stockSymbol].no[price.toString()] || ORDERBOOK[stockSymbol].no[price.toString()].total < quantity) {
-            res.json({
-                msg: `Not enough No stocks available`
-            })
-            return
-        }
-        ORDERBOOK[stockSymbol].no[price].total -= quantity;
-        STOCK_BALANCES[userId][stockSymbol].no.quantity += quantity;
 
-
-    } else if (stocktype === "yes") {
-        if (!ORDERBOOK[stockSymbol].yes[price] || ORDERBOOK[stockSymbol].yes[price].total < quantity) {
-            res.json({
-                msg: `Not enough Yes stocks available `
-            })
-            return
-        }
-        STOCK_BALANCES[userId][stockSymbol].yes.quantity += quantity;
-        ORDERBOOK[stockSymbol].yes[price].total -= quantity;
-
+    if (!ORDERBOOK[stockSymbol][stocktype][price] || ORDERBOOK[stockSymbol][stocktype][price].total < quantity) {
+        res.json({
+            msg: `Not enough ${stocktype} stocks available`
+        })
+        return
+    }
+    //  if (stocktype === stockType.yes) {
+    //     if (!ORDERBOOK[stockSymbol].yes[price] || ORDERBOOK[stockSymbol].yes[price].total < quantity) {
+    //         res.json({
+    //             msg: `Not enough Yes stocks available `
+    //         })
+    //         return
+    //     }
+    if (!STOCK_BALANCES[userId][stockSymbol]) {
+        STOCK_BALANCES[userId][stockSymbol] = { yes: { quantity: 0, locked: 0 }, no: { quantity: 0, locked: 0 } };
     }
 
-    if (stocktype !== "yes" && stocktype !== "no") {
-        res.json({ msg: "Please enter a valid stock type" });
-        return;
-    }
-    
+    ORDERBOOK[stockSymbol][stocktype][price].total -= quantity;
+    STOCK_BALANCES[userId][stockSymbol][stocktype].quantity += quantity;
     INR_BALANCES[userId].balance -= totalCost;
     INR_BALANCES[userId].locked += totalCost;
     if (!STOCK_BALANCES[userId]) {
         STOCK_BALANCES[userId] = {};
     }
-
-    if (!STOCK_BALANCES[userId][stockSymbol]) {
-        STOCK_BALANCES[userId][stockSymbol] = { yes: { quantity: 0, locked: 0 }, no: { quantity: 0, locked: 0 } };
-    }
-
-    // if (stocktype === 1) {
-    // } else if (stocktype === 0) {
-    // }
     res.json({ msg: "successful ig", stock: STOCK_BALANCES });
     return
 });
 
 router.post('/order/sell', async (req: Request, res: Response) => {
     const { userId, stockSymbol, quantity, price, stocktype } = req.body;
-    const parsedPrice = parseFloat(price);
-    if (!INR_BALANCES[userId]) {
-        res.status(400).json({ msg: "User not found" });
-        return
-    };
-    if (!STOCK_BALANCES[userId][stockSymbol]) {
-        res.json({
-            msg: `you don't have ${stockSymbol} stocks in your account`
-        })
-        return
-    };
-    const totalCost = price * quantity;
-    const userBalance = INR_BALANCES[userId].balance;
-    if (ORDERBOOK === null) {
-        ORDERBOOK = {}
-    }
-    if (totalCost > userBalance) {
-        res.json({
-            msg: "insufficient balance"
-        })
-        return
-    };
-    if (stocktype === "yes") {
-        if (STOCK_BALANCES[userId][stockSymbol].yes.quantity < quantity) {
+    const parsedPrice = price.toString();
+    try {
+        if (!INR_BALANCES[userId]) {
+            res.status(400).json({ msg: "User not found" });
+            return
+        };
+        if (!STOCK_BALANCES[userId][stockSymbol]) {
             res.json({
-                msg: `you don't have ${stockSymbol} yes stocks in your account`
+                msg: `you don't have ${stockSymbol} stocks in your account`
             })
             return
-        }
+        };
+        const totalCost = price * quantity;
+        const userBalance = INR_BALANCES[userId].balance;
         if (ORDERBOOK === null) {
             ORDERBOOK = {}
         }
-        STOCK_BALANCES[userId][stockSymbol].yes.quantity -= quantity;
-        ORDERBOOK[stockSymbol].yes[price].total  += quantity;
-    } else if (stocktype === "no") {
-        if (STOCK_BALANCES[userId][stockSymbol].no.quantity < quantity) {
+        if (totalCost > userBalance) {
             res.json({
-                msg: `insufficient NO stocks of ${stockSymbol}`
+                msg: "insufficient balance"
             })
             return
-        }
-        if (ORDERBOOK === null) {
-            ORDERBOOK = {}
-        }
-        STOCK_BALANCES[userId][stockSymbol].no.quantity -= quantity;
-        ORDERBOOK[stockSymbol].no[price].total += quantity;
-    };
+        };
+        if (stocktype === "yes") {
+            if (STOCK_BALANCES[userId][stockSymbol].yes.quantity < quantity) {
+                res.json({
+                    msg: `you don't have ${stockSymbol} yes stocks in your account`
+                })
+                return
+            }
+            if (ORDERBOOK === null) {
+                ORDERBOOK = {}
+            }
+            STOCK_BALANCES[userId][stockSymbol].yes.quantity -= quantity;
+            ORDERBOOK[stockSymbol].yes[price].total += quantity;
+        } else if (stocktype === "no") {
+            if (STOCK_BALANCES[userId][stockSymbol].no.quantity < quantity) {
+                res.json({
+                    msg: `insufficient NO stocks of ${stockSymbol}`
+                })
+                return
+            }
+            if (ORDERBOOK === null) {
+                ORDERBOOK = {}
+            }
+            STOCK_BALANCES[userId][stockSymbol].no.quantity -= quantity;
+            ORDERBOOK[stockSymbol].no[parsedPrice].total += quantity;
+            // console.log(parsedPrice)
+            // console.log(ORDERBOOK[stockSymbol].no)
+        };
 
-    INR_BALANCES[userId].balance -= totalCost;
-    INR_BALANCES[userId].locked += totalCost;
-    res.json({
-        msg: "Order placed ig"
-    });
+        INR_BALANCES[userId].balance -= totalCost;
+        INR_BALANCES[userId].locked += totalCost;
+        res.json({
+            msg: "Order placed ig"
+        });
+    } catch (e) {
+        console.error(e);
+    }
 });
 
 router.get('/orderbook/:stockSymbol', (req: Request, res: Response) => {
